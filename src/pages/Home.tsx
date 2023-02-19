@@ -2,23 +2,38 @@ import { useGetProductQuery } from '../store/product/productApi';
 import Product from './../components/Product';
 import Modal from './../components/Modal';
 import CreateProduct from '../components/CreateProduct';
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { IProducts } from '../models/models';
 import { ModalContext } from './../context/ModalContext';
 import { IoAddCircleOutline } from 'react-icons/io5';
-import { useParams } from 'react-router-dom';
 
 const Home = () => {
-  const { id } = useParams<{ id: any }>();
-
-  const { data: products, isLoading, isError } = useGetProductQuery(id);
-
-
   const { modal, open, close } = useContext(ModalContext);
-
   const createHandler = (product: IProducts) => {
     close();
   };
+
+  const [page, setPage] = useState(1);
+  const { data: products, isLoading, isError, isFetching } = useGetProductQuery(page);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const scrolledToBottom =
+        window.innerHeight + window.scrollY >= document.body.offsetHeight;
+      if (scrolledToBottom && !isFetching) {
+        console.log("Fetching more data...");
+        setPage(page + 1);
+      }
+    };
+
+    document.addEventListener("scroll", onScroll);
+
+    return function () {
+      document.removeEventListener("scroll", onScroll);
+    };
+  }, [page, isFetching]);
+
+  
 
   return (
     <div className='container mx-auto max-w-lg py-10'>

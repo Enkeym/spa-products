@@ -1,26 +1,35 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { IProducts } from "../../models/models";
-
-
-type PostsResponse = IProducts[];
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { IProducts } from '../../models/models';
 
 export const productApi = createApi({
   reducerPath: 'postsApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:3001',
+    baseUrl: 'http://localhost:3001/',
   }),
   tagTypes: ['product'],
   endpoints: (build) => ({
-    getProduct: build.query<PostsResponse, number>({
-      query: () => 'products',
-      providesTags: (result) =>
+    getProduct: build.query<IProducts[], any>({
+      query: (page) => `products?_limit=5&_page=${page}`,
+      serializeQueryArgs: ({ endpointName }) => {
+        return endpointName;
+      },
+      // Always merge incoming data to the cache entry
+      merge: (currentCache, newItems) => {
+        currentCache.push(...newItems);
+      },
+      // Refetch when the page arg changes
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg !== previousArg;
+      },
+      providesTags: (result, error, page) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'product', id } as const)),
-              { type: 'product', id: 'LIST' },
+              ...result.map(({ id }) => ({ type: 'product' as const, id })),
+              { type: 'product', id: 'PARTIAL-LIST' },
             ]
-          : [{ type: 'product', id: 'LIST' }],
+          : [{ type: 'product', id: 'PARTIAL-LIST' }],
     }),
+
     addProducts: build.mutation<IProducts, Partial<IProducts>>({
       query(body) {
         return {
@@ -31,6 +40,7 @@ export const productApi = createApi({
       },
       invalidatesTags: [{ type: 'product', id: 'LIST' }],
     }),
+
     getProducts: build.query<IProducts, number>({
       query: (id) => `products/${id}`,
       providesTags: (result, error, id) => [{ type: 'product', id }],
@@ -46,6 +56,7 @@ export const productApi = createApi({
       },
       invalidatesTags: (result, error, { id }) => [{ type: 'product', id }],
     }),
+
     deleteProducts: build.mutation<IProducts, any>({
       query(id) {
         return {
@@ -58,4 +69,9 @@ export const productApi = createApi({
   }),
 });
 
-export const {useGetProductQuery, useGetProductsQuery, useAddProductsMutation, useDeleteProductsMutation } = productApi;
+export const {
+  useGetProductQuery,
+  useGetProductsQuery,
+  useAddProductsMutation,
+  useDeleteProductsMutation,
+} = productApi;
